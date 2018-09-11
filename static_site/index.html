@@ -1,0 +1,196 @@
+<head>
+    <meta charset="UTF-8">
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js"></script>
+    <script>
+        jQuery.noConflict();
+    </script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.15/jquery-ui.min.js"></script>
+
+    <script src="https://d3js.org/d3.v3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/rickshaw/1.6.3/rickshaw.min.js"></script>
+    <link rel="stylesheet" type="text/css"
+          href="https://cdnjs.cloudflare.com/ajax/libs/rickshaw/1.6.3/rickshaw.min.css">
+
+    <style>
+        #banner {
+            background-color: rgba(0,0,255,0.2);
+            color: Black;
+            text-align: center;
+            width: 100%;
+            font-family: "Verdana", serif;
+            font-size: 4em;
+            margin: 0 auto;
+            padding: 0;
+        }
+        #static series {
+            float: left;
+        }
+        .column {
+            display: inline-block
+        }
+
+        #legend {
+            background: white
+        }
+
+        #legend .line {
+            color: #333
+        }
+    </style>
+</head>
+<body>
+<div id="banner">
+    Time Series Forecasting Service
+</div>
+<div class="column">
+    <div id="chart"></div>
+    <div id="slider"></div>
+</div>
+<div class="column" id="legend"></div>
+
+<h3>About</h3>
+This is a demo of the Time Series Forecasting Service Front End using MSI share price data from 2007 to the present. The site is statically hosted on AWS S3 behind a basic password
+protection scheme described
+<a href="https://hackernoon.com/serverless-password-protecting-a-static-website-in-an-aws-s3-bucket-bfaaa01b8666">
+    here </a>. There is a python code base that enables automatic updating of the data, models and forecasts that go into this static site. Tableau can be made to access the same data that this static site does, alowing for less customizable but more flexible / rapid investigation of the forecasts.
+The <a href="">TSFS git repo</a> has the code and documentation for this static site, and the python code behind the
+models and the updating system.
+
+<h3>Try it out!</h3>
+<ul>
+  <li>Mouse over the chart to get nearest data point</li>
+  <li>Hover on or select legend items to focus on a specific data series</li>
+  <li>Use the slider handles to narrow the range of data. Then drag this window across the whole series.</li>
+</ul>
+
+<h3>Author</h3>
+Erica Li, cunqian.li@motorolasolutions.com
+
+<h3>Known Bugs</h3>
+<ul>
+  <li>When I use the correct dates, the whole things slows down for some reason I currently cannot explain. Looking into it.</li>
+  <li>To achieve the nice shaded error bar, I use a hack the makes the upper confidence bound actually the difference between the upper and lower bounds stacked on top of a transparent lowerbond. It looks nice but the data values for the upper confidence bound are actually gap values</li>
+  <li>If you resize the browser, it doesn't adjust. I have a decent idea on how to fix this but i figure it's not really that important.</li>
+</ul>
+
+
+
+<h3>Model Decomposition</h3>
+<img id="decomposition" src="images/forecast.png" alt="Non interactive Forecast Image" style="height:500px;">
+<img id="static series" src="images/trends.png" alt="Non interactive Trend Image" style="height:500px;">
+
+
+
+
+<script>
+
+    var seriesData = [[], [], [], [], []];
+    var random = new Rickshaw.Fixtures.RandomData(50);
+
+    for (var i = 0; i < 75; i++) {
+        random.addData(seriesData);
+    }
+
+    jQuery.getJSON("data/data.json", function (json) {
+
+        var graph = new Rickshaw.Graph({
+            element: document.getElementById("chart"),
+            renderer: 'multi',
+            interpolation: 'linear',
+            width: 1600,
+            height: 500,
+            dotSize: 1,
+            series: [
+                 {
+                    name: 'PF Lower Bound',
+                    data: json.flb,
+                    color: 'transparent',
+                    renderer: 'stack'
+                }, {
+                    name: 'PF Upper Bound',
+                    data: json.gap,
+                    color: 'rgba(0,0,255,0.2)',
+                    renderer: 'stack'
+                },
+                {
+                    name: 'MSI Share Price ($USD)',
+                    data: json.truth,
+                    color: 'rgba(0,0,0,0.5)',
+                    renderer: 'scatterplot'
+                },
+                {
+                    name: 'Prophet Forecast (PF)',
+                    data: json.forecast,
+                    color: 'navy',
+                    renderer: 'line'
+                },
+                {
+                    name: 'Absolute Error',
+                    data: json.error,
+                    color: 'red',
+                    renderer: 'bar'
+                }
+            ]
+        });
+
+        var slider = new Rickshaw.Graph.RangeSlider.Preview({
+            graph: graph,
+            element: document.querySelector('#slider')
+        });
+
+        graph.render();
+
+        var detail = new Rickshaw.Graph.HoverDetail({
+            graph: graph
+        });
+
+        var legend = new Rickshaw.Graph.Legend({
+            graph: graph,
+            element: document.querySelector('#legend')
+        });
+
+        var highlighter = new Rickshaw.Graph.Behavior.Series.Highlight({
+            graph: graph,
+            legend: legend,
+            disabledColor: function () {
+                return 'rgba(0, 0, 0, 0.2)'
+            }
+        });
+
+        var highlighter = new Rickshaw.Graph.Behavior.Series.Toggle({
+            graph: graph,
+            legend: legend
+        });
+
+        var time = new Rickshaw.Fixtures.Time();
+        var seconds = time.unit('minute');
+
+        var xAxis = new Rickshaw.Graph.Axis.Time({
+            graph: graph,
+            timeUnit: seconds
+        });
+
+        xAxis.render();
+
+        var yAxis = new Rickshaw.Graph.Axis.Y({
+            graph: graph,
+            orientation: 'left',
+            element: document.getElementById('y_axis'),
+        });
+
+        yAxis.render();
+
+        var legend = new Rickshaw.Graph.Legend({
+            graph: graph,
+            element: document.querySelector('#graph')
+        });
+
+
+
+
+    });
+
+
+</script>
+</body>
