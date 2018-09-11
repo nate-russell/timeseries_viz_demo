@@ -89,7 +89,7 @@ models and the updating system.
         random.addData(seriesData);
     }
 
-    jQuery.getJSON("/data/data.json", function (json) {
+    jQuery.getJSON("data/data.json", function (json) {
 
         var graph = new Rickshaw.Graph({
             element: document.getElementById("chart"),
